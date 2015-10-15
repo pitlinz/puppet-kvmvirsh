@@ -1,0 +1,51 @@
+#!/bin/bash
+#
+# script to (re)define a virsh network 
+#
+# calls required virsh net-* 
+#
+# param $1 path to network.xml
+#
+
+if [ "$1" == "usage" ]; then
+	echo "usage:"
+	echo "$0 start network.xml [autostart]"
+	echo "$0 stop network.xml"
+	echo "$0 restart network.xml [autostart]"
+	echo "$0 status network.xml"
+	
+	exit 0
+fi
+
+if [ "x$2" == "x" ]; then
+	$0 usage
+	exit 1
+fi
+
+if [ ! -f $2 ]; then
+	echo "network.xml $2 not found"
+	exit 1
+fi
+
+NETNAME=`/usr/bin/basename $2 | /usr/bin/cut -f1 -d'.'`
+
+case "$1" in
+	start)
+		/usr/bin/virsh net-define $2
+		if [ "$3" == "autostart" ] then
+			/usr/bin/virsh net-autostart $NETNAME
+		fi
+		/usr/bin/virsh net-start $NETNAME
+		;;
+	
+	stop)
+		/usr/bin/virsh net-destroy $NETNAME
+		/usr/bin/virsh net-undefine $NETNAME
+		;;
+
+	restart)
+		$0 stop
+		$0 start
+		;;
+esac
+

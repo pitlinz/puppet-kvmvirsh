@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# script to (re)define a virsh pool 
+#
+# calls required virsh pool-* 
+#
+# param $1 path to pool.xml
+#
+
+. /etc/environment
+
+if [ "$1" == "usage" ]; then
+	echo "usage:"
+	echo "$0 start /etc/kvmvirsh/pools/pool.xml [autostart]"
+	echo "$0 stop /etc/kvmvirsh/pools/pool.xml"
+	echo "$0 restart /etc/kvmvirsh/pools/pool.xml [autostart]"
+	echo "$0 status pool"
+	
+	exit 0
+fi
+
+
+if [ "x$2" == "x" ]; then
+	$0 usage
+	exit 1
+fi
+
+if [ "$1" != "status" -a "$1" != "volume" ]; then
+	if [ ! -f $2 ]; then
+		echo "pool.xml $2 not found"
+		$0 usage
+		exit 1
+	fi
+	
+	POOLNAME=`/usr/bin/basename $2 | /usr/bin/cut -f1 -d'.'`
+else 
+	POOLNAME=$2
+fi
+
+case "$1" in
+	start)
+		/usr/bin/virsh pool-define $2
+		if [ "$3" == "autostart" ]; then
+			/usr/bin/virsh pool-autostart $POOLNAME
+		fi
+		/usr/bin/virsh pool-start $POOLNAME
+		;;
+	stop)
+		/usr/bin/virsh pool-destroy $POOLNAME
+		/usr/bin/virsh pool-undefine $POOLNAME
+		;;
+
+	restart)
+		$0 stop $2 
+		$0 start $2 $3
+		;;
+		
+	status)
+		POOLSTATE=`/usr/bin/virsh pool-list | grep $POOLNAME`
+		if [ "x$POOLSTATE" == "x" ]; then
+			echo "pool $POOLNAME is not defined"
+			if [ "$3" == "isstopped" ]; then
+				exit 0;
+			else 
+				exit 1;
+			fi
+		fi
+		if [ `echo "$POOLSTATE" | grep -c " active "` -lt 1 ]; then
+			echo "pool $POOLNAME is not active"
+			if [ "$3" == "isstopped" ]; then
+				exit 0;
+			else 
+				exit -1;
+			fi
+
+		fi
+		echo "pool $POOLNAME is active"
+		if [ "$3" == "isstopped" ]; then
+			exit 1;
+		else 
+			exit 0;
+		fi
+		;;
+	volume)
+		case "$3" in 
+			status)
+				virsh vol-info $4 $2 || exit -1
+				echo "volume $4 is online"
+				exit 0
+				;;
+		esac			
+		;;
+esac
