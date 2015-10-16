@@ -1,18 +1,15 @@
 /**
- * proxy module for virt
+ * class kvmvirsh
  *
- * to mange virtual nodes on kvm host with virsh and foreman
- *
- * uses some code from to configure virshk
- * @see https://github.com/thias/puppet-libvirt/blob/master/lib/puppet/provider/libvirt_pool/virsh.rb
+ * install libvirt
  */
 class kvmvirsh(
 	$hostid 	= 00,
 	$ipprefix	= '192.168.1',
 
 ) {
-    include ::virt
-    include ::kvmvirsh::params
+
+	include ::kvmvirsh::packages
 
     $xmlpath = "/etc/libvirt/kvmvirsh"
 
