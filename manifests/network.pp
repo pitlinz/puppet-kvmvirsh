@@ -1,19 +1,27 @@
 /**
- * class to configure main bridge
+ * class to configure default network
  *
+ * this network is used for bridged mode
+ *
+ * @see http://lukas.zapletalovi.com/2013/04/managing-many-servers-with-foreman.html
  * @see https://github.com/thias/puppet-libvirt/blob/master/manifests/network.pp
  *
  */
 class kvmvirsh::network (
-    $ext_if			= 'eth0',
+    $forward_dev	= 'eth0',
 	$forward_mode 	= 'route',
-
+    $net_id			= $::kvmvirsh::hostid,
+	$dhcp			= {
+	    	'start'	=> 100,
+	    	'end'	=> 120,
+		}
 ) {
     # ----------------------------------------------
     # includes
     # ----------------------------------------------
 
     include ::kvmvirsh
+    include ::kvmvirsh::firewall
 
     # ----------------------------------------------
     # declarations
@@ -23,31 +31,63 @@ class kvmvirsh::network (
 
 	# mac address of type x2:xx:..,x6:xx:..,xA:xx:..,xE:xx:...
 	# are Locally Administered Address Ranges that can be used on your network without fear of conflict
-    if ($::kvmvirsh::hostid < 10) {
-		$macaddrpre  = "02:06:0a:0e:0${::kvmvirsh::hostid}:"
+    if $net_id < 10 {
+		$macaddrpre = "02:01:0a:0e:0${net_id}:"
+
+		$arrippre = split("${::kvmvirsh::ipprefix}","\.")
+		if $arrippre[2] < 10 {
+			$network 	= "${::kvmvirsh::ipprefix}0${net_id}.0/24"
+			$ipaddrpre 	= "${::kvmvirsh::ipprefix}0${net_id}"
+		} else {
+			$network 	= "${::kvmvirsh::ipprefix}${net_id}.0/24"
+			$ipaddrpre 	= "${::kvmvirsh::ipprefix}${net_id}"
+		}
 	} else {
-		$macaddrpre  = "02:06:0a:0e:${::kvmvirsh::hostid}:"
+		$macaddrpre = "02:01:0a:0e:${net_id}:"
+		$network 	= "${::kvmvirsh::ipprefix}${net_id}.0/24"
+		$ipaddrpre 	= "${::kvmvirsh::ipprefix}${net_id}"
 	}
 
     # ----------------------------------------------
     # main
     # ----------------------------------------------
 
-	file {"${xmlpath}":
-		ensure 	=> directory,
-		require => File["${::kvmvirsh::xmlpath}"],
+    # ----------------------------------------------
+    # main
+    # ----------------------------------------------
+
+	if !defined(File["${xmlpath}"]) {
+		file {"${xmlpath}":
+			ensure 	=> directory,
+			require => File["${::kvmvirsh::xmlpath}"],
+		}
+	}
+
+	if is_hash($dhcp) {
+	    $vnetdhcp = {
+	        start 	=> "${ipaddrpre}.${dhcp[start]}",
+	        end		=> "${ipaddrpre}.${dhcp[end]}",
+	    }
+	} else {
+	    $vnetdhcp = undef
 	}
 
 	::kvmvirsh::network::vnet{"default":
 	    ensure 			=> running,
 	    autostart		=> true,
+	    bridge			=> $::kvmvirsh::bridgename,
 	    forward_mode	=> $forward_mode,
-	    ip				=> [
+	    forward_interfaces => ['eth0'],
+	    forward_dev		=> $forward_dev,
+	    ip				=>
 	        {
-	        	'address'	=> "${::kvmvirsh::ipprefix}${::kvmvirsh::hostid}.1",
-				'netmask'	=> "255.255.255.0"
+	        	'address'	=> "${ipaddrpre}.1",
+				'netmask'	=> "255.255.255.0",
+				'dhcp'		=> $vnetdhcp
 	    	}
-		],
+		,
+		virtnet			=> $network,
+		mac				=> "${macaddrpre}01",
 	}
 
 }

@@ -1,0 +1,52 @@
+
+####################################################################
+# Disk Partitioning/Boot loader with raid
+####################################################################
+
+d-i partman-auto/disk string /dev/sda /dev/sdb
+
+d-i partman-auto/method                     string regular
+d-i partman-auto/purge_lvm_from_device 		boolean true
+d-i partman-lvm/device_remove_lvm 			boolean true
+d-i partman-md/device_remove_md 			boolean true
+d-i partman-lvm/confirm 					boolean true
+d-i partman-basicfilesystems/no_swap 		boolean false
+
+# You can choose one of the three predefined partitioning recipes:
+# - atomic: all files in one partition
+# - home:   separate /home partition
+# - multi:  separate /home, /usr, /var, and /tmp partitions
+#
+#d-i partman-auto/choose_recipe select atomic
+
+d-i partman-auto/expert_recipe string \
+      root-swap :: \
+              4000 10000 -1 ext4     						\
+              		  $primary{ } $bootable{ }				\
+                      method{ format } format{ }            \
+                      use_filesystem{ } filesystem{ ext4 }  \
+                      mountpoint{ / } device { /dev/sda }   \
+              . 											\
+              64 1000 -1 linux-swap							\
+              		  $primary{ }                          	\
+                      method{ swap } format{ }              \
+                      device { /dev/sdb }					\
+              .												\
+              
+              
+d-i partman-auto/choose_recipe select root-swap
+              
+# This makes partman automatically partition without confirmation.
+d-i     partman/confirm boolean true
+d-i     partman-partitioning/confirm_write_new_label boolean true
+d-i     partman/choose_partition select finish
+d-i     partman/confirm_nooverwrite boolean true
+
+
+# This one makes grub-installer install to the MBR even if finds some other OS
+# too, which is less safe as it might not be able to boot that other OS.
+d-i     grub-installer/with_other_os    boolean true
+d-i 	grub-installer/only_debian      boolean true
+d-i 	grub-installer/bootdev			string /dev/sda
+
+              

@@ -1,0 +1,55 @@
+#!/bin/bash
+#
+# routing and masquerading for a guest
+
+case "$1" in
+	start)
+		<%- if @sshport then -%>
+		/sbin/iptables -t nat -I PREROUTING -p tcp --dport <%= sshport %> -j DNAT --to-destination <%= intip %>:22
+		<%- end -%>		
+		<%- if @tcpports and @extip then -%>
+		/sbin/iptables -t nat -I PREROUTING -d <%= @extip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
+		/sbin/iptables -A FORWARD -d <%= @intip %> -p tcp -m multiport --dports <%= tcpports %> -j ACCEPT
+		<%- end -%>
+		<%- if @extip != '' and @intip != '' -%>
+		/sbin/iptables -t nat -A KVMPOSTROUTING -s <%= intip %> -j SNAT --to <%= extip %>
+		<%- end -%>
+		<%- if @fwnat and @fwnat.size then -%>
+			<%- fwnat.to_a.each do |rule| -%>
+		/sbin/iptables -t nat -A <%= rule %>
+			<%- end -%>
+		<%- end -%>		
+		<%- if @fwfilter and @fwfilter.size then -%>
+			<%- fwfilter.to_a.each do |rule| -%>
+		/sbin/iptables -t nat -A <%= rule %>
+			<%- end -%>
+		<%- end -%>				
+		;;
+	stop)
+		<%- if @sshport then -%>
+		/sbin/iptables -t nat -D PREROUTING -p tcp --dport <%= sshport %> -j DNAT --to-destination <%= intip %>:22
+		<%- end -%>			
+		<%- if @tcpports and @extip then -%>
+		/sbin/iptables -t nat -D PREROUTING -d <%= @extip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
+		/sbin/iptables -D FORWARD -d <%= @intip %> -p tcp -m multiport --dports <%= tcpports %> -j ACCEPT
+		<%- end -%>
+		<%- if @extip != '' and @intip != '' -%>
+		/sbin/iptables -t nat -D KVMPOSTROUTING -s <%= intip %> -j SNAT --to <%= extip %>
+		<%- end -%>	
+		<%- if @fwnat and @fwnat.size then -%>
+			<%- fwnat.to_a.each do |rule| -%>
+		/sbin/iptables -t nat -D <%= rule %>
+			<%- end -%>
+		<%- end -%>		
+		<%- if @fwfilter and @fwfilter.size then -%>
+			<%- fwfilter.to_a.each do |rule| -%>
+		/sbin/iptables -t nat -D <%= rule %>
+			<%- end -%>
+		<%- end -%>							
+		;;
+	restart)
+		$0 stop
+		$0 start
+		;;
+esac
+

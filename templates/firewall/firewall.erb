@@ -1,0 +1,45 @@
+#! /bin/bash
+#
+# init the firewall
+
+### BEGIN INIT INFO
+# Provides:          kvmfirewall
+# Required-Start:    $network $syslog
+# Required-Stop:     $network $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: ip tables firewall
+# Description:       secure the host
+### END INIT INFO
+ 
+. /etc/environment
+
+case "$1" in
+	start)
+		for SCRIPT in `ls /etc/firewall/*.sh`; do
+			 $SCRIPT start
+		done;
+		;;
+	stop)
+		for SCRIPT in `ls -r /etc/firewall/*.sh`; do
+			 $SCRIPT stop
+		done;		
+		;;
+	restart)
+		$0 start
+		;;
+	status)
+		if [ `/sbin/iptables -L FORWARD -nv | grep virbr | grep -c REJECT` -gt 0 ]; then
+			echo "REJECT RULES for virbr found"
+			exit 1
+		fi
+		
+		if [ `/sbin/iptables -t nat -L | grep -c KVMPOSTROUTING` -lt 1 ]; then
+			echo "KVMPOSTROUTING not found"
+			exit 1		
+		fi
+		echo "firewall configured"
+		exit 0		
+		;;
+esac
+

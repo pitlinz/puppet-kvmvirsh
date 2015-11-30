@@ -12,7 +12,9 @@ class kvmvirsh::packages(
 ) {
     case $operatingsystem {
         'Ubuntu': {
-			kvmvirsh::packages::package{[ 'ubuntu-virt-server', 'python-vm-builder', 'qemu', 'qemu-kvm', 'ruby-libvirt','bridge-utils','virtinst' ]:
+            $service	 = "libvirt-bin"
+            $pkg_libvirt = "libvirt-bin"
+			kvmvirsh::packages::package{[ $pkg_libvirt, 'ubuntu-virt-server', 'python-vm-builder', 'qemu', 'qemu-kvm', 'ruby-libvirt','bridge-utils','virtinst','ipxe-qemu']:
 			    ensure => latest
 			}
         }

@@ -73,8 +73,9 @@ define kvmvirsh::network::vnet (
   $bridge             = undef,
   $forward_mode       = 'route',
   $forward_dev        = undef,
-  $forward_interfaces = [],
+  $forward_interfaces = ['eth0'],
   $ip                 = undef,
+  $virtnet			  = undef,
   $ipv6               = undef,
   $mac                = undef,
 ) {
@@ -90,7 +91,7 @@ define kvmvirsh::network::vnet (
 # includes
 # --------------------------------------
 
-	include ::kvmvirsh::params
+	include ::kvmvirsh
 
 # --------------------------------------
 # checks
@@ -99,12 +100,12 @@ define kvmvirsh::network::vnet (
 	if !defined(File["/etc/libvirt/kvmvirsh"]) {
 	    file {"/etc/libvirt/kvmvirsh":
 	        ensure 	=> directory,
-	        require => Package[$::kvmvirsh::params::package],
+	        require => Package["${::kvmvirsh::packages::pkg_libvirt}"],
 		}
 	}
 
-	if !defined(File["/etc/libvirt/kvmvirsh/pool"]) {
-	    file {"/etc/libvirt/kvmvirsh/pool":
+	if !defined(File["/etc/libvirt/kvmvirsh/networks"]) {
+	    file {"/etc/libvirt/kvmvirsh/networks":
 	        ensure 	=> directory,
 	        require => File["/etc/libvirt/kvmvirsh"],
 		}
@@ -134,57 +135,75 @@ define kvmvirsh::network::vnet (
 # main
 # --------------------------------------
 
+	concat{"${xml_file}":
+		ensure 	=> $ensure_file,
+		# notify  => Exec["vnetcommand_${name}"]
+	}
 
-	file {"${xml_file}":
-	    ensure 	=> $ensure_file,
-	    content => template('kvmvirsh/libvirt/network.xml.erb'),
+	concat::fragment{"${xml_file}_head":
+	    target	=> "${xml_file}",
+		content	=> template("kvmvirsh/libvirt/networkfargments/head.erb"),
+		order   => "00",
+	}
+
+	concat::fragment{"${xml_file}_forward":
+	    target	=> "${xml_file}",
+		content	=> template("kvmvirsh/libvirt/networkfargments/forward.erb"),
+		order   => "10",
+	}
+
+	concat::fragment{"${xml_file}_bridge":
+	    target	=> "${xml_file}",
+		content	=> template("kvmvirsh/libvirt/networkfargments/bridge.erb"),
+		order   => "20",
+	}
+
+	concat::fragment{"${xml_file}_ip_start":
+	    target	=> "${xml_file}",
+		content	=> template("kvmvirsh/libvirt/networkfargments/ip_start.erb"),
+		order   => "30",
+	}
+
+	concat::fragment{"${xml_file}_ip_end":
+	    target	=> "${xml_file}",
+		content	=> template("kvmvirsh/libvirt/networkfargments/ip_end.erb"),
+		order   => "39",
+	}
+
+	concat::fragment{"${xml_file}_close":
+	    target	=> "${xml_file}",
+	    content => "\n</network>\n",
+	    order	=> "99"
 	}
 
 	case $ensure_file {
-		'present': {
-			exec { "virsh-net-define-${name}":
-				command => "virsh net-define ${xml_file}",
-				unless  => "virsh -q net-list --all | grep -Eq '^\s*${name}'",
-				require => File["${xml_file}"],
-			}
-			if $autostart {
-				exec { "virsh-net-autostart-${name}":
-					command => "virsh net-autostart ${name}",
-					require => Exec["virsh-net-define-${name}"],
-					creates => $autostart_file,
-				}
-			}
-
-			if $ensure in [ 'enabled', 'running' ] {
-				exec { "virsh-net-start-${name}":
-					command => "virsh net-start ${name}",
-					require => Exec["virsh-net-define-${name}"],
-					unless  => "virsh -q net-list --all | grep -Eq '^\s*${name}\\s+active'",
-				}
-  			}
-
-		}
-
-		'absent': {
-			exec { "virsh-net-destroy-${name}":
-				command => "virsh net-destroy ${name}",
-				onlyif  => "virsh -q net-list --all | grep -Eq '^\s*${name}\\s+active'",
-			}
-			exec { "virsh-net-undefine-${name}":
-				command => "virsh net-undefine ${name}",
-				onlyif  => "virsh -q net-list --all | grep -Eq '^\s*${name}\\s+inactive'",
-				require => Exec["virsh-net-destroy-${name}"],
-			}
-
-			file { [ $network_file, $autostart_file ]:
-				ensure  => absent,
-				require => Exec["virsh-net-undefine-${name}"],
-		  	}
-		}
+	    'present': {
+	        if $autostart {
+	            $vnetcapp = "autostart"
+	        } else {
+	            $vnetcapp = ""
+	        }
+	        $vnetcommand = "/usr/local/bin/virsh-networking.sh restart ${xml_file} ${vnetcapp}"
+	    }
+	    'absent': {
+	         $vnetcommand = "/usr/local/bin/virsh-networking.sh stop ${xml_file} ${vnetcapp}"
+	    }
 		default : {
 			fail ("${module_name} This default case should never be reached in Libvirt::Network{'${name}':} on node ${::fqdn}.")
 		}
-
 	}
 
+	exec{"vnetcommand_${name}":
+	    command 	=> $vnetcommand,
+	    refreshonly => true
+	}
+
+
+	if $virtnet != undef {
+		file {"/etc/firewall/900-${name}.sh":
+			mode 	=> '0550',
+			content => template("kvmvirsh/firewall/virtnet.sh.erb"),
+			require	=> File["/etc/firewall"],
+		}
+	}
 }

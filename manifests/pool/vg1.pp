@@ -14,12 +14,12 @@
  * and defines the pool
  *
  */
-class kvmvirsh::pool(
+class kvmvirsh::pool::vg1(
     $ensure		= present,
-    $poolname	= $::kvmvirsh::pool0,
+    $poolname	= "vg1",
     $type		= "logical",
 	$sources	= [],
-	$targets	= ["<path>/dev/${::kvmvirsh::pool0}</path>"],
+	$targets	= ["<path>/dev/vg1</path>"],
 	$autostart	= true,
 ) {
 

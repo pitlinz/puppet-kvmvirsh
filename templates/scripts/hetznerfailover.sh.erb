@@ -1,0 +1,10 @@
+#!/bin/bash
+#
+# script to change hetzner failover-ip
+#
+LOGIN="<%= @user %>:<%=  @pwd %>"
+URL="https://robot-ws.your-server.de/failover/<%= @failoverip %>"
+SERVER="active_server_ip=<%= @hostip %>"
+
+/usr/bin/curl -u $LOGIN $URL -p $SERVER
+

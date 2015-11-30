@@ -32,20 +32,24 @@ NETNAME=`/usr/bin/basename $2 | /usr/bin/cut -f1 -d'.'`
 case "$1" in
 	start)
 		/usr/bin/virsh net-define $2
-		if [ "$3" == "autostart" ] then
+		if [ "$3" == "autostart" ]; then
 			/usr/bin/virsh net-autostart $NETNAME
 		fi
 		/usr/bin/virsh net-start $NETNAME
 		;;
 	
 	stop)
-		/usr/bin/virsh net-destroy $NETNAME
-		/usr/bin/virsh net-undefine $NETNAME
+		if [ `/usr/bin/virsh net-list | cut -f1-2 -d' ' | grep -c $NETNAME` -gt 0 ]; then
+			/usr/bin/virsh net-destroy $NETNAME
+		fi
+		if [ `/usr/bin/virsh net-list --all | cut -f1-2 -d' ' | grep -c $NETNAME` -gt 0 ]; then
+			/usr/bin/virsh net-undefine $NETNAME
+		fi
 		;;
 
 	restart)
-		$0 stop
-		$0 start
+		$0 stop $2 $3 $4
+		$0 start $2 $3 $4		
 		;;
 esac
 

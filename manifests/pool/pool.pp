@@ -56,13 +56,19 @@ define kvmvirsh::pool::pool(
 	file {"${xml_file}":
 	    ensure	=> $ensure_file,
 	    content => template('kvmvirsh/libvirt/pool.xml.erb'),
-		require => File["${::kvmvirsh::xmlpath}/pool"],
+		require => File["${::kvmvirsh::xmlpath}/pools"],
+	}
+
+	if $autostart {
+	    $autoparam = "autostart"
+	} else {
+	    $autoparam = ""
 	}
 
 	case $ensure_file {
 	    'present': {
 			exec{"start_pool_${name}":
-			    command => "/usr/local/bin/virsh-pool.sh start ${xml_file}",
+			    command => "/usr/local/bin/virsh-pool.sh start ${xml_file} ${autoparam}",
 				require => File["${xml_file}","/usr/local/bin/virsh-pool.sh"],
 				unless	=> "/usr/local/bin/virsh-pool.sh status ${name}",
 			}

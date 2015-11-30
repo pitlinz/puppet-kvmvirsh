@@ -1,0 +1,14 @@
+#! /bin/sh
+#
+# script which will be executed when the daemon is started or stopped
+#
+DATE=`date +'%Y-%m-%d %H:%M:%s'`
+echo "$DATE $@" >> /var/log/virshhook.log
+
+case "$2" in
+	start)	
+		/etc/init.d/firewall start
+		;;
+	shutdown)
+		;;
+esac

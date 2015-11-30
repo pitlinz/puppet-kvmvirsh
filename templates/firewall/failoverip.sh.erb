@@ -1,0 +1,47 @@
+#!/bin/bash
+#
+# prerouting for a guests failoverip
+#
+
+case "$1" in
+	start)
+		if [ "<%= @autostart %>" == "yes" ]; then
+			$0 takeover
+		fi
+		;;
+	takeover)
+		if [ `/sbin/ifconfig | /bin/grep -c "<%= failoverip %>"` -lt 1 ]; then
+			/sbin/ifconfig <%= @extif %>:<%= @netid %> <%= failoverip %> netmask <%= failovernm %> up
+		fi	
+		<%- if @tcpports and @failoverip then -%>
+		/sbin/iptables -t nat -A PREROUTING -d <%= @failoverip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
+		<%- end -%>
+		<%- if @udpports and @failoverip then -%>
+		/sbin/iptables -t nat -A PREROUTING -d <%= @failoverip %> -p udp -m multiport --dports <%= udpports %> -j DNAT --to-destination <%= intip %>
+		<%- end -%>	
+							
+		;;
+	stop)
+		<%- if @tcpports and @failoverip then -%>
+		/sbin/iptables -t nat -D PREROUTING -d <%= @failoverip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
+		<%- end -%>		
+		<%- if @udpports and @failoverip then -%>
+		/sbin/iptables -t nat -D PREROUTING -d <%= @failoverip %> -p udp -m multiport --dports <%= udpports %> -j DNAT --to-destination <%= intip %>
+		<%- end -%>		
+		if [ `/sbin/ifconfig | /bin/grep -c "<%= failoverip %>"` -lt 1 ]; then
+			/sbin/ifconfig <%= @extif %>:<%= @netid %> down
+		fi						
+		;;
+	restart)
+		$0 stop
+		$0 takeover	
+		;;
+		
+	
+	ifstate)
+		if [ `/sbin/ifconfig | /bin/grep -c "<%= failoverip %>"` -lt 1 ]; then
+			echo "<%= failoverip %> not assigned"
+			exit -1
+		fi
+	
+esac

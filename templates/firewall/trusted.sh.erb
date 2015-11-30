@@ -1,0 +1,59 @@
+#!/bin/bash
+#
+# initial trusted <%= trusttbl %> network settings
+
+case "$1" in
+	start)
+		if [ "x$2" != "x" -a "$2" != "<%= trusttbl %>" ]; then
+			exit 0
+		fi 	
+		if [ "x$2" == "x" ]; then
+			/sbin/iptables -N <%= trusttbl %>
+			/sbin/iptables -A INPUT -j <%= trusttbl %>
+			/sbin/iptables -A FORWARD -j <%= trusttbl %>
+		fi	
+<%- if trustedlist.size > 0 then -%>
+	<%- trustedlist.each do |net| -%>
+	  	/sbin/iptables -A <%= trusttbl %> -s <%= net %> -j ACCEPT	  	
+	<% end -%>
+<% end -%>  
+<%- if @vlan_net then -%>
+		/sbin/iptables -A INPUT -s <%= vlan_net %> -j ACCEPT 
+<% end -%>		
+		;;
+	stop)
+<%- if @vlan_net then -%>
+		/sbin/iptables -D INPUT -s <%= vlan_net %> -j ACCEPT 
+<% end -%>			
+		/sbin/iptables -D INPUT -j <%= trusttbl %>
+		/sbin/iptables -D FORWARD -j <%= trusttbl %>	
+		/sbin/iptables -F <%= trusttbl %>
+		/sbin/iptables -X <%= trusttbl %>		
+		;;
+	restart)
+		$0 stop
+		$0 start
+		;;
+	update)
+		if [ "x$2" != "x" -a "$2" != "<%= trusttbl %>" ]; then
+			exit 0
+		fi 		
+		if [ `/sbin/iptables-save | grep -c ":<%= trusttbl %>"` -lt 1 ]; then
+			$0 start 
+		else
+			/sbin/iptables -F <%= trusttbl %>
+<%- if trustedlist.size > 0 then -%>
+	<%- trustedlist.each do |net| -%>
+	  		/sbin/iptables -A <%= trusttbl %> -s <%= net %> -j ACCEPT	  	
+	<% end -%>
+<% end -%>  
+			if [ "<%= trusttbl %>" == "TRUSTED" ]; then 
+				for SCRIPT in `ls /etc/firewall/02[1-9]-*trusted.sh`; do
+					 $SCRIPT start TRUSTED			
+				done
+			fi
+		fi
+		;;
+esac
+
+

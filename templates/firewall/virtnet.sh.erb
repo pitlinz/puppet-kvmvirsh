@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# script to manage virtual guest network
+
+. /etc/environment 
+
+ # vlan configuration <%= name %>
+
+case "$1" in
+	start)
+		iptables -A INPUT -s <%= virtnet %> -j ACCEPT
+		iptables -A FORWARD -s <%= virtnet %> -j ACCEPT
+		iptables -t nat -I POSTROUTING -s <%= virtnet %> -d <%= virtnet %> -j ACCEPT  
+		 
+		iptables-save | grep <%= bridge %> | grep reject > /tmp/reject
+		iptables-save | grep FORWARD | grep "\-o <%= bridge %>" | grep "\-d <%= virtnet %>" >> /tmp/reject
+		iptables-save | grep FORWARD | grep "\-o <%= bridge %>" | grep "\-d <%= virtnet %>" >> /tmp/reject
+		iptables-save | grep FORWARD | grep "RELATED,ESTABLISHED" >> /tmp/reject
+		sed -i "s/-A/\/sbin\/iptables -D/g" /tmp/reject
+		echo "/sbin/iptables -I FORWARD -m state --state RELATED,ESTABLISHED -j ACCEPT" >> /tmp/reject
+ 
+		. /tmp/reject	
+		 
+		;;
+	stop)
+		iptables -D INPUT -s <%= virtnet %> -j ACCEPT
+		iptables -D FORWARD -s <%= virtnet %> -j ACCEPT
+		iptables -t nat -D POSTROUTING -s <%= virtnet %> -d <%= virtnet %> -j ACCEPT  
+		;;
+	restart)
+		$0 stop
+		$0 start
+		;;
+esac

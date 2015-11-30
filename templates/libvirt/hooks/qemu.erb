@@ -1,0 +1,23 @@
+#! /bin/sh
+#
+# this script is exectued every time a kvm domain changes it's status
+#
+DATE=`date +'%Y-%m-%d %H:%M:%s'`
+echo "$DATE $@" >> /var/log/qemuhook.log
+USR=`/usr/bin/whoami`
+
+FWSCRIPT="/etc/firewall/910-${1}.sh"
+if [ -x $FWSCRIPT ]; then
+	case "$2" in 
+		started)
+			$FWSCRIPT start 2>1 & >> /var/log/qemuhook.log
+			# echo "$USR: $FWSCRIPT start" >> /var/log/qemuhook.log
+			;;
+		stopped)
+			$FWSCRIPT stop 2>1 & >> /var/log/qemuhook.log
+			# echo "$USR: $FWSCRIPT stop" >> /var/log/qemuhook.log
+			;;
+	esac
+fi
+		
+			
