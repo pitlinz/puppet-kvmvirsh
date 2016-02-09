@@ -14,8 +14,22 @@ class kvmvirsh::packages(
         'Ubuntu': {
             $service	 = "libvirt-bin"
             $pkg_libvirt = "libvirt-bin"
-			kvmvirsh::packages::package{[ $pkg_libvirt, 'ubuntu-virt-server', 'python-vm-builder', 'qemu', 'qemu-kvm', 'ruby-libvirt','bridge-utils','virtinst','ipxe-qemu']:
+			kvmvirsh::packages::package{[ $pkg_libvirt, 'ubuntu-virt-server', 'python-vm-builder', 'qemu', 'qemu-kvm','bridge-utils','virtinst','virt-viewer']:
 			    ensure => latest
+			}
+
+			case $operatingsystemrelease {
+				'12.04': {
+					kvmvirsh::packages::package{['kvm-ipxe', 'libvirt-ruby']:
+					    ensure => latest,
+					}
+				}
+				default: {
+					kvmvirsh::packages::package{['ipxe-qemu', 'ruby-libvirt']:
+					    ensure => latest,
+					}
+				}
+
 			}
         }
     }

@@ -100,7 +100,8 @@
 
 	if !defined(Service["firewall"]) {
 	    service{"firewall":
-	        ensure => running
+	        ensure 	=> running,
+	        require	=> File["/etc/init.d/firewall"],
 		}
 	}
 }

@@ -45,7 +45,7 @@ class kvmvirsh::foremanproxy(
 	}
 
 	if $tftp_enabled == 'true' or $tftp_enabled == 'http' or $tftp_enabled == 'https' {
-	    include ::tftp
+	    # include ::tftp
 
 	    if !defined(Package["kvm-ipxe"]) {
 	        package{"kvm-ipxe":

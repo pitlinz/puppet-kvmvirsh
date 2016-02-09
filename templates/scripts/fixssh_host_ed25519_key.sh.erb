@@ -1,0 +1,12 @@
+#!/bin/bash
+#
+. /etc/environment
+
+MDSUM=`md5sum /etc/ssh/ssh_host_ed25519_key | cut -b1-32`
+if [ "$MDSUM" == "af773ced1d596462e5135bdaf81dae8d" ]; then
+	rm /etc/ssh/ssh_host_ed25519_*
+	ssh-keygen -A
+	md5sum /etc/ssh/ssh_host_ed25519_key | cut -b1-32 > /etc/ssh/ssh_host_ed25519_key.md5
+else
+	echo $MDSUM > /etc/ssh/ssh_host_ed25519_key.md5 
+fi

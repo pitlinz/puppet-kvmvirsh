@@ -24,12 +24,13 @@ define kvmvirsh::guest(
 	$guestmemory  = "1024",
 
 	#network params
-	$netname	  = 'default',
+	$netname	  = "${::kvmvirsh::netname}",
 	$guestintip   = undef,
 	$guestmacaddr = undef,
 	$hostbrname   = undef,
 
 	$guestextip   = $::ipaddress,
+	$guestextname = undef,
 	$hostexitif   = "eth0",
 
 	$tcpports	  = undef,
@@ -46,7 +47,7 @@ define kvmvirsh::guest(
 	$hdc = undef,
 	$hdd = undef,
 
-
+	$osvariant		= "ubuntutrusty",
 	$isoimage 		= undef,
 	$isoimagesrc	= "http://releases.ubuntu.com/14.04/ubuntu-14.04.3-server-amd64.iso",
 	$installurl		= "http://ftp.ubuntu.com/ubuntu/dists/trusty/main/installer-amd64/"
@@ -119,14 +120,9 @@ define kvmvirsh::guest(
 	}
 
 
-
-
-
 	# -------------------------------------
 	# disks
 	# -------------------------------------
-
-
 
 	if is_hash($hda) {
 	    ::kvmvirsh::pool::vol{"${name}_hda": disk => $hda, params => $diskparams }
@@ -176,6 +172,7 @@ define kvmvirsh::guest(
 			creates => "${::kvmvirsh::isopath}/${isoimage}",
 			require => Exec["mkdir_${::kvmvirsh::isopath}"],
 		}
+		$viinst = "-c ${::kvmvirsh::isopath}/${isoimage}"
 	} elsif $installurl != undef {
 	    $viinst = "-l ${installurl}"
 	}
@@ -188,9 +185,14 @@ define kvmvirsh::guest(
 	}
 
 	# exec virt-install
+	$toolpath = "${::kvmvirsh::xmlpath}/tools"
+	file{"${toolpath}/install_${name}":
+	    mode	=> '700',
+	    content	=> "/usr/bin/virt-install --os-variant $osvariant $vibasik $network $diskparams $vivnc $viinst\n"
+	}
 
 	exec{"virtinstall_${name}":
-	    command => "/usr/bin/virt-install $vibasik $network $diskparams $vivnc $viinst",
+	    command => "/usr/bin/virt-install --os-variant $osvariant $vibasik $network $diskparams $vivnc $viinst",
 		creates => "/etc/libvirt/qemu/${name}.xml",
 		require => Kvmvirsh::Pool::Vol[$hd_require]
 	}
@@ -203,7 +205,12 @@ define kvmvirsh::guest(
 		}
 	}
 
-
+	if $guestextname != undef {
+		include ::kvmvirsh::guest::cloudflaire
+		::kvmvirsh::guest::cloudfaire::dnsentry{"${guestextname}":
+			ip => "${guestextip}",
+		}
+	}
 
 
 }

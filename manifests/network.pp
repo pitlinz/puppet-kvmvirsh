@@ -12,8 +12,8 @@ class kvmvirsh::network (
 	$forward_mode 	= 'route',
     $net_id			= $::kvmvirsh::hostid,
 	$dhcp			= {
-	    	'start'	=> 100,
-	    	'end'	=> 120,
+	    	'start'	=> 9,
+	    	'end'	=> 99,
 		}
 ) {
     # ----------------------------------------------
@@ -32,15 +32,16 @@ class kvmvirsh::network (
 	# mac address of type x2:xx:..,x6:xx:..,xA:xx:..,xE:xx:...
 	# are Locally Administered Address Ranges that can be used on your network without fear of conflict
     if $net_id < 10 {
-		$macaddrpre = "02:01:0a:0e:0${net_id}:"
+        $int_net_id = $net_id * 1
+		$macaddrpre = "02:01:0a:0e:0${int_net_id}:"
 
 		$arrippre = split("${::kvmvirsh::ipprefix}","\.")
 		if $arrippre[2] < 10 {
-			$network 	= "${::kvmvirsh::ipprefix}0${net_id}.0/24"
-			$ipaddrpre 	= "${::kvmvirsh::ipprefix}0${net_id}"
+			$network 	= "${::kvmvirsh::ipprefix}0${int_net_id}.0/24"
+			$ipaddrpre 	= "${::kvmvirsh::ipprefix}0${int_net_id}"
 		} else {
-			$network 	= "${::kvmvirsh::ipprefix}${net_id}.0/24"
-			$ipaddrpre 	= "${::kvmvirsh::ipprefix}${net_id}"
+			$network 	= "${::kvmvirsh::ipprefix}${int_net_id}.0/24"
+			$ipaddrpre 	= "${::kvmvirsh::ipprefix}${int_net_id}"
 		}
 	} else {
 		$macaddrpre = "02:01:0a:0e:${net_id}:"

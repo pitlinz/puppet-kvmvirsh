@@ -7,10 +7,6 @@ case "$1" in
 		<%- if @sshport then -%>
 		/sbin/iptables -t nat -I PREROUTING -p tcp --dport <%= sshport %> -j DNAT --to-destination <%= intip %>:22
 		<%- end -%>		
-		<%- if @tcpports and @extip then -%>
-		/sbin/iptables -t nat -I PREROUTING -d <%= @extip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
-		/sbin/iptables -A FORWARD -d <%= @intip %> -p tcp -m multiport --dports <%= tcpports %> -j ACCEPT
-		<%- end -%>
 		<%- if @extip != '' and @intip != '' -%>
 		/sbin/iptables -t nat -A KVMPOSTROUTING -s <%= intip %> -j SNAT --to <%= extip %>
 		<%- end -%>
@@ -23,6 +19,10 @@ case "$1" in
 			<%- fwfilter.to_a.each do |rule| -%>
 		/sbin/iptables -t nat -A <%= rule %>
 			<%- end -%>
+		<%- end -%>		
+		<%- if @tcpports and @extip then -%>
+		/sbin/iptables -t nat -I PREROUTING -d <%= @extip %> -p tcp -m multiport --dports <%= tcpports %> -j DNAT --to-destination <%= intip %>
+		/sbin/iptables -A FORWARD -d <%= @intip %> -p tcp -m multiport --dports <%= tcpports %> -j ACCEPT
 		<%- end -%>				
 		;;
 	stop)

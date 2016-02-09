@@ -9,6 +9,7 @@ class kvmvirsh(
 	$extif		= 'eth0',
 	$bridgename = 'virbr0',
 	$localnet	= '192.168.0.0/16',
+	$netname	= 'default',
 
 	$vnc_listen		= '0.0.0.0',
 	$vnc_password	= undef,
@@ -93,6 +94,21 @@ class kvmvirsh(
 
 	service{"${::kvmvirsh::packages::service}":
 	    ensure => running,
+	}
+
+	# -----------------------------------------------
+	# fix hetzner ssh key
+	# -----------------------------------------------
+
+	file {"/usr/local/bin/fixssh_host_ed25519_key.sh":
+	    mode => '0550',
+		content => template("kvmvirsh/scripts/fixssh_host_ed25519_key.sh.erb"),
+	}
+
+	exec{"fixssh_host_ed25519_key":
+	    command => "/usr/local/bin/fixssh_host_ed25519_key.sh",
+		creates => "/etc/ssh/ssh_host_ed25519_key.md5",
+		require => File["/usr/local/bin/fixssh_host_ed25519_key.sh"],
 	}
 
 }
