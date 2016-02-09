@@ -137,7 +137,7 @@ define kvmvirsh::network::vnet (
 
 	concat{"${xml_file}":
 		ensure 	=> $ensure_file,
-		# notify  => Exec["vnetcommand_${name}"]
+		notify  => Exec["vnetcommand_${name}"]
 	}
 
 	concat::fragment{"${xml_file}_head":

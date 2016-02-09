@@ -91,7 +91,7 @@ define kvmvirsh::guest(
 
 		if !defined(Host["${name}.${guestdomain}"]) {
 			host{"${name}.${guestdomain}":
-			    ip => $intip
+			    ip => $intip,
 			}
 		}
 	}
@@ -99,7 +99,7 @@ define kvmvirsh::guest(
     $xml_file 		= "${::kvmvirsh::network::xmlpath}/${netname}.xml"
     concat::fragment{"${xml_file}_ip_${netname}_${name}":
 		target	=> "${xml_file}",
-		content => "\t\t<host mac='${macaddr}' name='${name}' ip='${intip}' />\n",
+		content => "\t\t<host mac='${macaddr}' name='${name}.${guestdomain}' ip='${intip}' />\n",
 		order   => "35",
 	}
 
