@@ -10,6 +10,22 @@ class kvmvirsh::foremanproxy(
 ) {
     include ::apt
 
+/*
+	if !defined(Package['software-properties-common']) {
+		package{"software-properties-common":
+		    ensure => latest,
+		}
+	}
+
+	apt::ppa{"ppa:webupd8team/y-ppa-manager":}
+
+	if !defined(Package["y-ppa-manager"]) {
+	    package{"y-ppa-manger":
+	        ensure => latests,
+	        require => Apt::Ppa["ppa:webupd8team/y-ppa-manager"],
+		}
+	}
+*/
 	apt::source { "foreman":
     	location   => 'http://deb.theforeman.org',
     	repos      => 'stable',

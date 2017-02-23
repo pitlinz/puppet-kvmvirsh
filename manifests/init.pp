@@ -100,15 +100,16 @@ class kvmvirsh(
 	# fix hetzner ssh key
 	# -----------------------------------------------
 
-	file {"/usr/local/bin/fixssh_host_ed25519_key.sh":
-	    mode => '0550',
-		content => template("kvmvirsh/scripts/fixssh_host_ed25519_key.sh.erb"),
-	}
+	if !defined(File["/usr/local/bin/fixssh_host_ed25519_key.sh"]) {
+		file {"/usr/local/bin/fixssh_host_ed25519_key.sh":
+		    mode => '0550',
+			content => template("kvmvirsh/scripts/fixssh_host_ed25519_key.sh.erb"),
+		}
 
-	exec{"fixssh_host_ed25519_key":
-	    command => "/usr/local/bin/fixssh_host_ed25519_key.sh",
-		creates => "/etc/ssh/ssh_host_ed25519_key.md5",
-		require => File["/usr/local/bin/fixssh_host_ed25519_key.sh"],
+		exec{"fixssh_host_ed25519_key":
+		    command => "/usr/local/bin/fixssh_host_ed25519_key.sh",
+			creates => "/etc/ssh/ssh_host_ed25519_key.md5",
+			require => File["/usr/local/bin/fixssh_host_ed25519_key.sh"],
+		}
 	}
-
 }

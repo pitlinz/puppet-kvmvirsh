@@ -137,7 +137,6 @@ define kvmvirsh::network::vnet (
 
 	concat{"${xml_file}":
 		ensure 	=> $ensure_file,
-		notify  => Exec["vnetcommand_${name}"]
 	}
 
 	concat::fragment{"${xml_file}_head":
@@ -183,19 +182,28 @@ define kvmvirsh::network::vnet (
 	        } else {
 	            $vnetcapp = ""
 	        }
-	        $vnetcommand = "/usr/local/bin/virsh-networking.sh restart ${xml_file} ${vnetcapp}"
+
+	        #$vnetcommand = "/usr/local/bin/virsh-networking.sh restart ${xml_file} ${vnetcapp}"
+	        $vnetcommand = "echo \"restart ${ip}\" > /tmp/virship "
+			if !has_ip_address($ip['address']) {
+				exec{"vnetcommand_${name}":
+				    command 	=> $vnetcommand,
+				}
+			}
+
 	    }
 	    'absent': {
-	         $vnetcommand = "/usr/local/bin/virsh-networking.sh stop ${xml_file} ${vnetcapp}"
+			#$vnetcommand = "/usr/local/bin/virsh-networking.sh stop ${xml_file} ${vnetcapp}"
+			$vnetcommand = "echo \"stop ${ip}\" > /tmp/virship "
+			if has_ip_address($ip['address']) {
+				exec{"vnetcommand_${name}":
+				    command 	=> $vnetcommand,
+				}
+			}
 	    }
 		default : {
 			fail ("${module_name} This default case should never be reached in Libvirt::Network{'${name}':} on node ${::fqdn}.")
 		}
-	}
-
-	exec{"vnetcommand_${name}":
-	    command 	=> $vnetcommand,
-	    refreshonly => true
 	}
 
 

@@ -29,9 +29,10 @@ define kvmvirsh::guest(
 	$guestmacaddr = undef,
 	$hostbrname   = undef,
 
-	$guestextip   = $::ipaddress,
-	$guestextname = undef,
-	$hostexitif   = "eth0",
+	$guestextip   	= undef,
+	$guestextnetmask= "255.255.255.192",
+	$guestextname 	= undef,
+	$hostexitif   	= "eth0",
 
 	$tcpports	  = undef,
 	$fwnat        = [],
@@ -47,10 +48,12 @@ define kvmvirsh::guest(
 	$hdc = undef,
 	$hdd = undef,
 
+	$ostype			= "linux",
 	$osvariant		= "ubuntutrusty",
 	$isoimage 		= undef,
-	$isoimagesrc	= "http://releases.ubuntu.com/14.04/ubuntu-14.04.3-server-amd64.iso",
-	$installurl		= "http://ftp.ubuntu.com/ubuntu/dists/trusty/main/installer-amd64/"
+	$isoimagesrc	= "http://releases.ubuntu.com/14.04/ubuntu-14.04.4-server-amd64.iso",
+	$installurl		= "http://archive.ubuntu.com/ubuntu/dists/trusty/main/installer-amd64/",
+	#$installurl	= "http://archive.ubuntu.com/ubuntu/dists/xenial/main/installer-amd64/",
 ) {
 
 	include ::kvmvirsh::network
@@ -92,6 +95,7 @@ define kvmvirsh::guest(
 		if !defined(Host["${name}.${guestdomain}"]) {
 			host{"${name}.${guestdomain}":
 			    ip => $intip,
+			    alias => $name,
 			}
 		}
 	}
@@ -101,6 +105,22 @@ define kvmvirsh::guest(
 		target	=> "${xml_file}",
 		content => "\t\t<host mac='${macaddr}' name='${name}.${guestdomain}' ip='${intip}' />\n",
 		order   => "35",
+	}
+
+	if is_ip_address($guestextip) {
+		$_guestextip = $guestextip
+	} else {
+	    $_ipif = "::ipaddress_$hostexitif"
+		$_guestextip = inline_template("<%= scope.lookupvar('${_ipif}') -%>")
+	}
+
+	if is_ip_address($_guestextip) {
+		if !has_ip_address($_guestextip) and !defined(Exec["ifconfig_${guestextip}"]) {
+		 	exec{"ifconfig_${guestextip}":
+		 	    command => "/sbin/ifconfig ${hostexitif}:${vncid} ${_guestextip} netmask ${guestextnetmask} up",
+				notify	=> Service["firewall"],
+			}
+		}
 	}
 
 	# firewall
@@ -184,15 +204,31 @@ define kvmvirsh::guest(
 	    $vivnc = " --graphics vnc,port=59${vncid},keymap=de"
 	}
 
+	if $ostype != "" {
+	    $_ostype = "--os-type $ostype"
+	} else {
+	    $_ostype = ""
+	}
+
+	if $::lsbdistcodename != "xenial" {
+		if $osvariant != "" {
+		    $_osvariant = "--os-variant $osvariant"
+		} else {
+		    $_osvariant = ""
+		}
+	}
+
 	# exec virt-install
 	$toolpath = "${::kvmvirsh::xmlpath}/tools"
+
+
 	file{"${toolpath}/install_${name}":
 	    mode	=> '700',
-	    content	=> "/usr/bin/virt-install --os-variant $osvariant $vibasik $network $diskparams $vivnc $viinst\n"
+	    content	=> "/usr/bin/virt-install $_ostype $_osvariant $vibasik $network $diskparams $vivnc $viinst\n"
 	}
 
 	exec{"virtinstall_${name}":
-	    command => "/usr/bin/virt-install --os-variant $osvariant $vibasik $network $diskparams $vivnc $viinst",
+	    command => "/usr/bin/virt-install $_ostype $_osvariant $vibasik $network $diskparams $vivnc $viinst",
 		creates => "/etc/libvirt/qemu/${name}.xml",
 		require => Kvmvirsh::Pool::Vol[$hd_require]
 	}
@@ -206,8 +242,8 @@ define kvmvirsh::guest(
 	}
 
 	if $guestextname != undef {
-		include ::kvmvirsh::guest::cloudflaire
-		::kvmvirsh::guest::cloudfaire::dnsentry{"${guestextname}":
+		include ::kvmvirsh::guest::cloudflare
+		::kvmvirsh::guest::cloudflare::dnsentry{"${guestextname}":
 			ip => "${guestextip}",
 		}
 	}

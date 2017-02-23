@@ -1,0 +1,24 @@
+#!/bin/bash
+#
+#
+# @see https://api.cloudflare.com/ for api docu
+#
+URL="https://api.cloudflare.com/client/v4/zones"
+
+curl -s -X GET "$URL" \
+-H "X-Auth-Email: <%= @email %>" \
+-H "X-Auth-Key: <%= @apikey %>" \
+-H "Content-Type: application/json" > /tmp/cf-zones
+
+NOFZONES=`jshon -F /tmp/cf-zones -e result -l`
+i=0
+while [ $i -lt $NOFZONES ]; do
+	if [ "`jshon -F /tmp/cf-zones -e result -e $i -e name -u`" == "$1" ]; then
+		 jshon -F /tmp/cf-zones -e result -e $i -e id -u
+		 exit 0
+	fi
+	let i=$i+1
+done
+
+exit 1
+

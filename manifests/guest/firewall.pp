@@ -10,18 +10,16 @@ define kvmvirsh::guest::firewall(
 	$fwnat		= [],
 	$fwfilter	= [],
 ) {
+	# notify{"firewall ${name} TCP: ${tcpports}":}
 
 	include ::kvmvirsh::firewall
+
+	# notify {$tcpports:}
 
     file{"/etc/firewall/910-${name}.sh":
         mode 	=> '0550',
 		content => template("kvmvirsh/firewall/guest.sh.erb"),
 		require => File["/etc/firewall"],
-		notify 	=> Exec["fw_restart_910-${name}"],
+		notify 	=> Service["firewall"],
     }
-
-    exec{"fw_restart_910-${name}":
-        command => "/etc/firewall/910-${name}.sh restart",
-        refreshonly => true,
-	}
 }

@@ -5,7 +5,6 @@
  # vlan configuration <%= name %>
  
  
-
 case "$1" in
 	start)  
 		if [ `/sbin/iptunnel show | grep -c "^ulan<%= rhostid %>"` -lt 1 ]; then     
@@ -21,26 +20,29 @@ case "$1" in
 			#ip route add <%= @rnetwork %> dev ulan<%= rhostid %>
 		fi
 		
-		iptables -A INPUT -s <%= @rnetwork %> -j ACCEPT
-		iptables -A INPUT -s <%= remoteip %> -j ACCEPT
-		iptables -A INPUT -s <%= remotevip %> -j ACCEPT
-		iptables -A FORWARD -s <%= rnetwork %> -j ACCEPT
-		iptables -A FORWARD -d <%= rnetwork %> -j ACCEPT
-		iptables -A FORWARD -s <%= remotevip %>  -j ACCEPT
-		iptables -A FORWARD -s <%= remoteip %>  -j ACCEPT
-                
+		iptables -L <%= ipfwdtbl %> 2>1 > /dev/null
+		if [ $? == 1 ]; then
+			iptables -N <%= ipfwdtbl %>
+			iptables -A INPUT -j <%= ipfwdtbl %>
+			iptables -A FORWARD -j <%= ipfwdtbl %>
+		fi 
+		
+		iptables -A <%= ipfwdtbl %> -s <%= @rnetwork %> -j ACCEPT
+		iptables -A <%= ipfwdtbl %> -s <%= remoteip %> -j ACCEPT
+		iptables -A <%= ipfwdtbl %> -s <%= remotevip %> -j ACCEPT
+		iptables -A <%= ipfwdtbl %> -s <%= rnetwork %> -j ACCEPT
+		iptables -A <%= ipfwdtbl %> -d <%= rnetwork %> -j ACCEPT
+
 		iptables -t nat -I POSTROUTING -s <%= lnetwork %> -d <%= rnetwork %> -j ACCEPT
 		;;
 		
 	stop)
-		iptables -D INPUT -s <%= @rnetwork %> -j ACCEPT
-		iptables -D INPUT -s <%= remotevip %> -j ACCEPT
-		iptables -D INPUT -s <%= remoteip %> -j ACCEPT
-		iptables -D FORWARD -s <%= @rnetwork %> -j ACCEPT		
-		iptables -D FORWARD -d <%= @rnetwork %> -j ACCEPT
-		iptables -D FORWARD -s <%= remotevip %> -j ACCEPT
-		iptables -D FORWARD -s <%= remoteip %> -j ACCEPT
-                
+		iptables -D <%= ipfwdtbl %> -s <%= @rnetwork %> -j ACCEPT
+		iptables -D <%= ipfwdtbl %> -s <%= remoteip %> -j ACCEPT
+		iptables -D <%= ipfwdtbl %> -s <%= remotevip %> -j ACCEPT
+		iptables -D <%= ipfwdtbl %> -s <%= rnetwork %> -j ACCEPT
+		iptables -D <%= ipfwdtbl %> -d <%= rnetwork %> -j ACCEPT
+         
 		iptables -t nat -D POSTROUTING -s <%= lnetwork %> -d <%= rnetwork %> -j ACCEPT
                 
 		if [ `/sbin/iptunnel show | grep -c "^ulan<%= rhostid %>"` -gt 0 ]; then                

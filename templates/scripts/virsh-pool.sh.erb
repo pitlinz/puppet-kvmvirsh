@@ -84,9 +84,13 @@ case "$1" in
 	volume)
 		case "$3" in 
 			status)
-				virsh vol-info $4 $2 || exit -1
-				echo "volume $4 is online"
-				exit 0
+				if [ `virsh vol-info $4 $2 2>&1 | grep -c error` -lt 1 ]; then
+					echo "volume $4 is online"
+					exit 0
+				else
+					echo "volume $4 has errors"
+					exit -1
+				fi
 				;;
 		esac			
 		;;

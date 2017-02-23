@@ -1,0 +1,6 @@
+<disk type='block' device='disk'>
+      <driver name='qemu' type='raw' cache='none'/>
+      <source dev='<%= @sourcedev %>'/>
+      <target dev='<%= @targetdev %>' bus='<%= bus %>'/>
+      <%= @address %>
+</disk>

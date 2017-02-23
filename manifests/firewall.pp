@@ -41,11 +41,13 @@
 	file {"/etc/firewall/000-init.sh":
 	    content => template("kvmvirsh/firewall/init.sh.erb"),
 	    require	=> File["/etc/firewall"],
+	    notify	=> Service["firewall"],
 	}
 
 	file {"/etc/firewall/010-routing.sh":
 		content => template("kvmvirsh/firewall/routing.sh.erb"),
 		require	=> File["/etc/firewall"],
+		notify	=> Service["firewall"],
 	}
 
 	if is_array($trustedips) {
@@ -66,7 +68,7 @@
     }
 
     exec{"/etc/firewall/020-trusted.sh":
-		command => "/etc/firewall/020-trusted.sh update",
+		command => "/etc/firewall/020-trusted.sh update TRUSTED",
 		refreshonly => true
 	}
 
@@ -78,7 +80,8 @@
 
 	exec {"update-rc-firewall":
 		command => "/usr/sbin/update-rc.d firewall defaults",
-		refreshonly => true
+		refreshonly => true,
+		before => Service['firewall'],
     }
 
 

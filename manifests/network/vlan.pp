@@ -3,10 +3,12 @@
  *
  */
 define kvmvirsh::network::vlan (
-  $remoteip = undef,
-  $rhostid = undef,
-  $rnetwork = "192.168.1${rhostid}.0/24",
-  $lnetwork = "${::kvmvirsh::network::network}",
+	$ensure	= present,
+  	$remoteip = undef,
+	$rhostid = undef,
+	$rnetwork = "192.168.1${rhostid}.0/24",
+	$lnetwork = "${::kvmvirsh::network::network}",
+	$ipfwdtbl = 'KVMVLAN', # table that holds
 ) {
 
 	if $remoteip != $::ipaddress_eth0 {
@@ -19,12 +21,13 @@ define kvmvirsh::network::vlan (
   		}
 
 		file {"/etc/firewall/011-init-${name}.sh":
-			ensure  => present,
+			ensure  => $ensure,
 			owner   => "root",
 			group   => "root",
 			mode    => "0550",
 			content => template("kvmvirsh/firewall/init-vlan.sh.erb"),
-			require => File["/etc/firewall"]
+			require => File["/etc/firewall"],
+			notify	=> Service["firewall"],
 		}
 	} else {
 		file {"/etc/firewall/011-init-${name}.sh":
